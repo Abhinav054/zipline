@@ -15,6 +15,7 @@ from . import core as bundles
 
 import shutil
 from zipfile import ZipFile
+import datetime
 
 handler = StreamHandler(sys.stdout, format_string=" | {record.message}")
 logger = Logger(__name__)
@@ -181,23 +182,27 @@ def tranform_data(csvdir,tmp_csv):
     symbols = get_symbols(csvdir)
     make_dirs(tmp_csv)
     for symbol in symbols:
-        f = open(tmp_csv+"/minutes/"+symbol+".csv",'w')
-	    f.writelines('Ticker,Date,Time,Open,High,Low,Close,Volume\n')
+        f = open(tmp_csv+"/minute/"+symbol+".csv",'w')
         f.writelines('date,open,high,low,close,volume\n')
         for month in months:
             for file_name in os.listdir(csvdir+'/'+month):
 			if 'DS_Store' in file_name:
 				pass
-			else:
-				myfile = ZipFile(open(csvdir+'/'+month+'/'+file_name))
-				t_f = myfile.read(file_name[:-4]+'/'+ticker+'.txt')
-                #change this to join date and time
-                for r_l in t_f.readline():
-                    values = r_l.split(',')
-                    dt = values[1]+" "+values[2]
-                    r_n = [dt]+values[2:]
-                    r_s = ','.join(r_n)
-				    f.writelines(r_s+"\n")
+            else:
+                try:
+                    myfile = ZipFile(open(csvdir+'/'+month+'/'+file_name))
+                    t_f = myfile.read(file_name[:-4]+'/'+symbol+'.txt')
+                    for r_l in t_f.split('\n'):
+                        values = r_l.replace('\r','').split(',')
+                        if len(values)>1:
+                            dt = values[1]+" "+values[2]
+                            dtp = datetime.datetime.strptime(dt,'%Y%m%d %H:%M')
+                            dts = datetime.datetime.strftime(dtp,'%Y-%m-%d %H:%M:%S')
+                            r_n = [dts]+values[3:8]
+                            r_s = ','.join(r_n)
+                            f.writelines(r_s+"\n")
+                except Exception as e:
+                    print str(e)
         f.close()
 
 
@@ -211,7 +216,7 @@ def get_symbols(csvdir):
 
 def make_dirs(tmp_csv):
     shutil.rmtree(tmp_csv)
-    os.makedirs(tmp_csv+"/minutes")
+    os.makedirs(tmp_csv+"/minute")
 
 
 
